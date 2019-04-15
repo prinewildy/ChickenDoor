@@ -1,18 +1,8 @@
+#include "config.h"
 #include <Arduino.h>
 #include "BasicStepperDriver.h"
 #include <ESP8266WiFi.h>
 
-#define MOTOR_STEPS 200
-#define RPM 120
-
-#define MICROSTEPS 1
-
-#define DIR 16
-#define STEP 5
-#define ENABLE 1
-
-#define HEIGHT 250
-#define PITCH 8
 
 BasicStepperDriver stepper(MOTOR_STEPS, DIR, STEP);
 
