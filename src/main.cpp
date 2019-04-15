@@ -1,4 +1,4 @@
-#include "config.h"
+#include "chickenDoorConfig.h"
 #include <Arduino.h>
 #include "BasicStepperDriver.h"
 #include <ESP8266WiFi.h>
