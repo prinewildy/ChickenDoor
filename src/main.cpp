@@ -1,25 +1,19 @@
 #include "chickenDoorConfig.h"
 #include <Arduino.h>
-#include "BasicStepperDriver.h"
 #include <ESP8266WiFi.h>
-
-
-BasicStepperDriver stepper(MOTOR_STEPS, DIR, STEP);
+#include "Door.h"
 
 const char* ssid = "duckdog";
 const char* password = "helenandben";
 const char* host = "192.168.0.57";
 
 WiFiServer server(80); 
-
-String door = "open";
 String header;
+Door door(HEIGHT);
 
-void setup() {
-    Serial.begin(115200);
-    stepper.begin(RPM, MICROSTEPS);
-    
-    // Connect to WiFi network
+void startWiFI()
+{
+  // Connect to WiFi network
     Serial.println();
     Serial.println();
     Serial.print("Connecting to ");
@@ -40,8 +34,11 @@ void setup() {
   
     // Print the IP address
     Serial.println(WiFi.localIP()); 
-    
-    
+}
+
+void setup() {
+    Serial.begin(115200);    
+    startWiFI();  
 }
 
 void loop() {
@@ -70,16 +67,10 @@ void loop() {
             // turns the GPIOs on and off
             if (header.indexOf("GET /door/open") >= 0) {
               Serial.println("open");
-              door = "open";
-              stepper.enable();
-              stepper.rotate((HEIGHT/PITCH)*-360);
-              stepper.disable();
+              door.OpenDoor();              
             } else if (header.indexOf("GET /door/close") >= 0) {
               Serial.println("close");
-              door = "closed";
-              stepper.enable();
-              stepper.rotate((HEIGHT/PITCH)*360);
-              stepper.disable();
+              door.CloseDoor();              
             }
            
             
@@ -96,12 +87,11 @@ void loop() {
             // Web Page Heading
             client.println("<body><h1>Chicken Door Web Server</h1>");
             
-            
-            client.println("<p>Door - State " + door + "</p>");
-            
-            if (door=="closed") {
+            if (door.getDoorState()==0) {
+              client.println("<p>Door State - Closed</p>");
               client.println("<p><a href=\"/door/open\"><button class=\"button\">Open</button></a></p>");
             } else {
+              client.println("<p>Door State - Open</p>");
               client.println("<p><a href=\"/door/close\"><button class=\"button button2\">Close</button></a></p>");
             } 
                
