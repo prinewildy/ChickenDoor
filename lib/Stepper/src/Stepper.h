@@ -15,6 +15,7 @@ public:
   void Disable();
   void Stop();
   void Move(int degs);
+  int getSteps(){return m_steps;}
 };
 
 #endif

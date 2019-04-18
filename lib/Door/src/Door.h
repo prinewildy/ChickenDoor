@@ -5,8 +5,10 @@
 class Door {
 private:
   int m_height;
+  int m_position;
   bool m_doorState;
   Stepper& m_stepper;
+  int m_degsToOpenDoor;
 
 public:
   Door(int height, Stepper& stepper);
@@ -16,9 +18,8 @@ public:
   void CloseDoor();
   void OpenDoor();
   void Home();
-  int getPosition();
-
   int getHeight() { return m_height; }
+  int getPosition(){ return m_position; }
   bool getDoorState() { return m_doorState; }
 };
 

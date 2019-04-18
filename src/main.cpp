@@ -39,8 +39,7 @@ void startWiFI() {
 
 void setup() {
   Serial.begin(9600);
-  startWiFI();
-  pinMode(2, OUTPUT);
+  startWiFI();  
 }
 
 void loop() {
