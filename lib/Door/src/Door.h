@@ -6,12 +6,12 @@ class Door {
 private:
   int m_height;
   bool m_doorState;
-  Stepper m_stepper;
+  Stepper& m_stepper;
 
 public:
-  Door(int height, Stepper stepper);
+  Door(int height, Stepper& stepper);
 
-  void SetStepper(Stepper stepper);
+  void SetStepper(Stepper &stepper);
   void SetHeight(int height);
   void CloseDoor();
   void OpenDoor();
