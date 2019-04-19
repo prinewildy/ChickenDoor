@@ -7,20 +7,20 @@ Stepper::Stepper(int dir, int enable, int sleep, int step, int steps)
   pinMode(m_dir, OUTPUT);
   pinMode(m_step, OUTPUT);
   pinMode(m_sleep, OUTPUT);
-  pinMode(m_enable, OUTPUT);  
+  pinMode(m_enable, OUTPUT);
 }
 
 void Stepper::Move(int degs) {
 
   if (degs < 0) {
-    digitalWrite(m_dir, HIGH);    
+    digitalWrite(m_dir, HIGH);
   } else {
-    digitalWrite(m_dir, LOW);    
+    digitalWrite(m_dir, LOW);
   }
 
-  int stepsToMove = degs * m_steps;
+  int stepsToMove = abs(degs) * m_steps;
   for (int x = 0; x < stepsToMove; x++) {
-
+    // Serial.println("steping");
     digitalWrite(m_step, HIGH);
     delayMicroseconds(500);
     digitalWrite(2, LOW);
@@ -40,7 +40,4 @@ void Stepper::Disable() {
   digitalWrite(m_sleep, LOW);
 }
 
-void Stepper::Stop()
-{
-  Stepper::Disable();  
-}
+void Stepper::Stop() { Stepper::Disable(); }

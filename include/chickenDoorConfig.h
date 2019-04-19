@@ -9,5 +9,5 @@
 #define SLEEP 2
 #define END_STOP 3
 
-#define HEIGHT 250
+#define HEIGHT 50
 #define PITCH 8

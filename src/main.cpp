@@ -10,7 +10,7 @@ const char *host = "192.168.0.57";
 
 WiFiServer server(80);
 String header;
-Stepper stepper(MOTOR_STEPS, DIR, STEP, ENABLE, SLEEP);
+Stepper stepper(DIR, ENABLE, SLEEP, STEP, MOTOR_STEPS);
 Door door(HEIGHT, stepper);
 
 void startWiFI() {
@@ -39,7 +39,7 @@ void startWiFI() {
 
 void setup() {
   Serial.begin(9600);
-  startWiFI();  
+  startWiFI();
 }
 
 void loop() {
