@@ -6,12 +6,15 @@ class Door {
 private:
   int m_height;
   int m_position;
+  int m_pitch;
+  int m_endStop;
   bool m_doorState;
-  Stepper& m_stepper;
+  bool m_doorMoving;
+  Stepper &m_stepper;
   int m_degsToOpenDoor;
 
 public:
-  Door(int height, Stepper& stepper);
+  Door(int height, int pitch, int endStop, Stepper &stepper);
 
   void SetStepper(Stepper &stepper);
   void SetHeight(int height);
@@ -19,8 +22,9 @@ public:
   void OpenDoor();
   void Home();
   int getHeight() { return m_height; }
-  int getPosition(){ return m_position; }
+  int getPosition() { return m_position; }
   bool getDoorState() { return m_doorState; }
+  volatile bool isDoorMoving() { return m_doorMoving; }
 };
 
 #endif

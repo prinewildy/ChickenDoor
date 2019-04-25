@@ -1,32 +1,35 @@
 #include "Door.h"
 #include "Arduino.h"
 
-Door::Door(int height, Stepper &stepper)
-    : m_height(height), m_stepper(stepper) {
-  m_degsToOpenDoor = m_height / 8;
-
-  pinMode(2, OUTPUT);
+Door::Door(int height, int pitch, int endStop, Stepper &stepper)
+    : m_height(height), m_pitch(pitch), m_endStop(endStop), m_stepper(stepper) {
+  m_degsToOpenDoor = m_height / m_pitch;
+  m_doorState = 0;
+  pinMode(m_endStop, INPUT);
 }
 
 void Door::OpenDoor() {
-  m_stepper.Enable();
-  m_stepper.Move(m_degsToOpenDoor);
-  m_doorState = 1;
-  // m_stepper.Disable();
+
+  if (m_doorState == 0) {
+    m_stepper.Enable();
+    m_doorMoving = 1;
+    while (digitalRead(m_endStop)) {
+      m_stepper.Move(1);
+    }
+    m_doorMoving = 0;
+    m_doorState = 1;
+    m_stepper.Disable();
+  }
 }
 
 void Door::CloseDoor() {
-  Door::Home();
-  m_stepper.Enable();
-  m_stepper.Move(m_degsToOpenDoor * -1);
-  m_doorState = 0;
-  // m_stepper.Disable();
-}
 
-void Door::Home() {
-  //   while(digitalRead(3))
-  //   {
-  //     m_stepper.Move(-1);
-  //   }
-  //   m_position = 0;
+  if (m_doorState == 1) {
+    m_stepper.Enable();
+    m_doorMoving = 1;
+    m_stepper.Move(m_degsToOpenDoor * -1);
+    m_doorMoving = 0;
+    m_doorState = 0;
+    m_stepper.Disable();
+  }
 }

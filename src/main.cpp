@@ -1,8 +1,19 @@
 #include "Door.h"
 #include "Stepper.h"
-#include "chickenDoorConfig.h"
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+
+const int MOTOR_STEPS = 200;
+
+const int DIR = 16;
+const int STEP = 5;
+const int ENABLE = 14;
+const int END_STOP = 4;
+
+const int LED = 2;
+
+const int HEIGHT = 250;
+const int PITCH = 8;
 
 const char *ssid = "duckdog";
 const char *password = "helenandben";
@@ -10,8 +21,8 @@ const char *host = "192.168.0.57";
 
 WiFiServer server(80);
 String header;
-Stepper stepper(DIR, ENABLE, SLEEP, STEP, MOTOR_STEPS);
-Door door(HEIGHT, stepper);
+Stepper stepper(DIR, ENABLE, STEP, MOTOR_STEPS);
+Door door(HEIGHT, PITCH, END_STOP, stepper);
 
 void startWiFI() {
   // Connect to WiFi network
@@ -37,33 +48,38 @@ void startWiFI() {
   Serial.println(WiFi.localIP());
 }
 
+void ICACHE_RAM_ATTR flashISR() {
+  if (door.isDoorMoving() == 1) {
+    digitalWrite(LED, !digitalRead(LED));
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   startWiFI();
+  pinMode(LED, OUTPUT);
+  timer1_isr_init();
+  timer1_attachInterrupt(flashISR);
+  timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
+  timer1_write(75000);
 }
 
 void loop() {
 
   WiFiClient client = server.available();
 
-  if (client) {                    // If a new client connects,
-    Serial.println("New Client."); // print a message out in the serial port
-    String currentLine =
-        ""; // make a String to hold incoming data from the client
-    while (client.connected()) { // loop while the client's connected
-      if (client.available()) {  // if there's bytes to read from the client,
-        char c = client.read();  // read a byte, then
-        Serial.write(c);         // print it out the serial monitor
+  if (client) {
+    Serial.println("New Client.");
+    String currentLine = "";
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        Serial.write(c);
         header += c;
-        if (c == '\n') { // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a
-          // row.
-          // that's the end of the client HTTP request, so send a response:
+
+        if (c == '\n') {
+
           if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200
-            // OK)
-            // and a content-type so the client knows what's coming, then a
-            // blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
@@ -72,13 +88,13 @@ void loop() {
             if (header.indexOf("GET /door/open") >= 0) {
               Serial.println("open");
               door.OpenDoor();
-
+              digitalWrite(LED, LOW);
             } else if (header.indexOf("GET /door/close") >= 0) {
               Serial.println("close");
               door.CloseDoor();
+              digitalWrite(LED, HIGH);
             }
 
-            // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" "
                            "content=\"width=device-width, initial-scale=1\">");
@@ -94,7 +110,6 @@ void loop() {
             client.println(
                 ".button2 {background-color: #77878A;}</style></head>");
 
-            // Web Page Heading
             client.println("<body><h1>Chicken Door Web Server</h1>");
 
             if (door.getDoorState() == 0) {
@@ -109,22 +124,19 @@ void loop() {
 
             client.println("</body></html>");
 
-            // The HTTP response ends with another blank line
             client.println();
-            // Break out of the while loop
+
             break;
-          } else { // if you got a newline, then clear currentLine
+          } else {
             currentLine = "";
           }
-        } else if (c != '\r') { // if you got anything else but a carriage
-                                // return character,
-          currentLine += c;     // add it to the end of the currentLine
+        } else if (c != '\r') {
+          currentLine += c;
         }
       }
     }
-    // Clear the header variable
+
     header = "";
-    // Close the connection
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
