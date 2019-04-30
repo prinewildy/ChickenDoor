@@ -1,10 +1,10 @@
 #include "Door.h"
-#include "Stepper.h"
-#include <Arduino.h>
 #include "ESP8266WiFi.h"
 #include "ESPAsyncTCP.h"
 #include "ESPAsyncWebServer.h"
+#include "Stepper.h"
 #include "iostream"
+#include <Arduino.h>
 
 const int MOTOR_STEPS = 200;
 
@@ -21,13 +21,11 @@ const int PITCH = 8;
 const char *ssid = "duckdog";
 const char *password = "helenandben";
 
-WiFiServer server(80);
-String header;
+AsyncWebServer server(80);
 Stepper stepper(DIR, ENABLE, STEP, MOTOR_STEPS);
 Door door(HEIGHT, PITCH, END_STOP, stepper);
 
-void startWiFI()
-{
+void startWiFI() {
   // Connect to WiFi network
   Serial.println();
   Serial.println();
@@ -36,8 +34,7 @@ void startWiFI()
 
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
@@ -50,26 +47,21 @@ void startWiFI()
   Serial.println(WiFi.localIP());
 }
 
-void ICACHE_RAM_ATTR flashISR()
-{
-  if (door.isDoorMoving() == 1)
-  {
+void ICACHE_RAM_ATTR flashISR() {
+  if (door.isDoorMoving() == 1) {
     digitalWrite(LED, !digitalRead(LED));
   }
 }
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
-  AsyncWebServer server(80);
+
   startWiFI();
   pinMode(LED, OUTPUT);
-  
 
   server.on("/door/open", HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("open");
-    if (!door.isDoorMoving())
-    {
+    if (!door.isDoorMoving()) {
       door.OpenDoor();
       digitalWrite(LED, LOW);
     }
@@ -78,8 +70,7 @@ void setup()
 
   server.on("/door/close", HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("close");
-    if (!door.isDoorMoving())
-    {
+    if (!door.isDoorMoving()) {
       door.CloseDoor();
       digitalWrite(LED, HIGH);
     }
@@ -87,6 +78,7 @@ void setup()
   });
 
   server.on("/door", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Serial.println("door");
     String htmlStr;
     htmlStr = "<!DOCTYPE html><html>";
     htmlStr = htmlStr + "<head><meta name=\"viewport\" "
@@ -95,30 +87,32 @@ void setup()
     htmlStr = htmlStr + "<style>html { font-family: Helvetica; display: "
                         "inline-block; margin: 0px auto; text-align: "
                         "center;}";
-    htmlStr = htmlStr + ".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;";
-    htmlStr = htmlStr + "text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}";
+    htmlStr = htmlStr + ".button { background-color: #195B6A; border: none; "
+                        "color: white; padding: 16px 40px;";
+    htmlStr = htmlStr + "text-decoration: none; font-size: 30px; margin: 2px; "
+                        "cursor: pointer;}";
     htmlStr = htmlStr + ".button2 {background-color: #77878A;}</style></head>";
     htmlStr = htmlStr + "<body><h1>Chicken Door Web Server</h1>";
-    if (door.getDoorState() == 0)
-    {
+    if (door.getDoorState() == 0) {
       htmlStr = htmlStr + "<p>Door State - Closed</p>";
-      htmlStr = htmlStr + "<p><a href=\"/door/open\"><button class=\"button\">Open</button></a></p>";
-    }
-    else
-    {
+      htmlStr = htmlStr + "<p><a href=\"/door/open\"><button "
+                          "class=\"button\">Open</button></a></p>";
+    } else {
       htmlStr = htmlStr + "<p>Door State - Open</p>";
-      htmlStr = htmlStr + "<p><a href=\"/door/close\"><button class=\"button button2\">Close</button></a></p>";
+      htmlStr = htmlStr + "<p><a href=\"/door/close\"><button class=\"button "
+                          "button2\">Close</button></a></p>";
     }
     htmlStr = htmlStr + "</body></html>";
-    request->send(200, "text/plain", htmlStr);
+    request->send(200, "text/html", htmlStr);
   });
+  Serial.println("begin web server");
+  server.begin();
 
   timer1_isr_init();
   timer1_attachInterrupt(flashISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
   timer1_write(75000);
+  door.OpenDoor();
 }
 
-void loop()
-{
-}
+void loop() {}

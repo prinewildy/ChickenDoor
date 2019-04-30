@@ -14,7 +14,7 @@ void Door::OpenDoor() {
     m_stepper.Enable();
     m_doorMoving = 1;
     while (digitalRead(m_endStop)) {
-      m_stepper.Move(1);
+      // m_stepper.Move(1);
     }
     m_doorMoving = 0;
     m_doorState = 1;
@@ -27,7 +27,7 @@ void Door::CloseDoor() {
   if (m_doorState == 1) {
     m_stepper.Enable();
     m_doorMoving = 1;
-    m_stepper.Move(m_degsToOpenDoor * -1);
+    // m_stepper.Move(m_degsToOpenDoor * -1);
     m_doorMoving = 0;
     m_doorState = 0;
     m_stepper.Disable();
