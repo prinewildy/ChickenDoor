@@ -18,12 +18,28 @@ void Stepper::Move(int degs) {
 
   int stepsToMove = abs(degs) * m_steps;
   for (int x = 0; x < stepsToMove; x++) {
-    digitalWrite(m_step, HIGH);
-    delayMicroseconds(500);
-    digitalWrite(m_step, LOW);
-    delayMicroseconds(500);
-    yield();
+    Stepper::Step();
   }
+}
+
+void Stepper::MoveSteps(int steps) {
+
+  if (steps < 0) {
+    digitalWrite(m_dir, HIGH);
+  } else {
+    digitalWrite(m_dir, LOW);
+  }
+  for (int x = 0; x < steps; x++) {
+    Stepper::Step();
+  }
+}
+
+void Stepper::Step() {
+  digitalWrite(m_step, HIGH);
+  delayMicroseconds(500);
+  digitalWrite(m_step, LOW);
+  delayMicroseconds(500);
+  yield();
 }
 
 void Stepper::Enable() { digitalWrite(m_enable, HIGH); }
