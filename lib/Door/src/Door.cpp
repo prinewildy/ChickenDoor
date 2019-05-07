@@ -6,6 +6,7 @@ Door::Door(int height, int pitch, int endStop, Stepper &stepper)
   m_degsToOpenDoor = m_height / m_pitch;
   m_doorState = 0;
   pinMode(m_endStop, INPUT);
+  m_manualMode = 0;
 }
 
 void Door::OpenDoor() {

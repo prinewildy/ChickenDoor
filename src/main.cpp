@@ -86,7 +86,7 @@ void startWiFI() {
 }
 
 void ICACHE_RAM_ATTR flashISR() {
-  if (door.isDoorMoving() == 1) {
+  if (door.isDoorMoving() == 1 or door.getManualMode() == 1) {
     digitalWrite(LED, !digitalRead(LED));
   }
 }
@@ -172,12 +172,19 @@ void setup() {
   timeClient.begin();
 
   server.on("/door/open", HTTP_GET, [](AsyncWebServerRequest *request) {
+    door.setManualMode(1);
     action = 1;
     request->redirect("/door");
   });
 
   server.on("/door/close", HTTP_GET, [](AsyncWebServerRequest *request) {
+    door.setManualMode(1);
     action = -1;
+    request->redirect("/door");
+  });
+
+  server.on("/door/manual", HTTP_GET, [](AsyncWebServerRequest *request) {
+    door.setManualMode(0);
     request->redirect("/door");
   });
 
@@ -206,6 +213,20 @@ void setup() {
       htmlStr = htmlStr + "<p><a href=\"/door/close\"><button class=\"button "
                           "button2\">Close</button></a></p>";
     }
+    if (door.getManualMode() == 1) {
+      htmlStr = htmlStr + "<p>Door is in manual mode</p>";
+      htmlStr = htmlStr + "<p><a href=\"/door/manual\"><button "
+                          "class=\"button\">Auto Mode</button></a></p>";
+    }
+    htmlStr = htmlStr + "<p>Time: ";
+    htmlStr = htmlStr + dateTime.hour + ":" + dateTime.minute + ":" +
+              dateTime.second + "</p>";
+    htmlStr = htmlStr + "<p>Sun Rise: ";
+    htmlStr = htmlStr + sunTimes.rise.hour + ":" + sunTimes.rise.minute + ":" +
+              sunTimes.rise.second + "</p>";
+    htmlStr = htmlStr + "<p>Sun Set: ";
+    htmlStr = htmlStr + sunTimes.set.hour + ":" + sunTimes.set.minute + ":" +
+              sunTimes.set.second + "</p>";
     htmlStr = htmlStr + "</body></html>";
     request->send(200, "text/html", htmlStr);
   });
@@ -216,7 +237,10 @@ void setup() {
   timer1_attachInterrupt(flashISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
   timer1_write(75000);
+  delay(1000);
+  Serial.println("start door open");
   door.OpenDoor();
+  Serial.println("end door open");
 }
 
 sun getSunTimes() {
@@ -260,6 +284,7 @@ sun getSunTimes() {
 }
 
 void loop() {
+  delay(1000);
   if (action != 0) {
     if (!door.isDoorMoving()) {
       if (action > 0) {
@@ -293,26 +318,37 @@ void loop() {
     }
     currentDay = dateTime.day;
   }
-
-  // after sunrise open the door
-  if (door.getDoorState() == 0 && dateTime.hour < 12 &&
-      (dateTime.hour > sunTimes.rise.hour ||
-       (dateTime.hour =
-            sunTimes.rise.hour && dateTime.minute >= sunTimes.rise.minute))) {
-    door.OpenDoor();
-    Serial.println("Open");
-    digitalWrite(LED, LOW);
+  // if we are in manual mode stop the auto open/close
+  if (door.getManualMode() == 0) {
+    // dont open the door if it's already open
+    if (door.getDoorState() != 1) {
+      // if time between (latest of 8AM and Sunrise)
+      // and less than sunset: open door
+      if ((dateTime.hour < sunTimes.set.hour &&
+           dateTime.minute < sunTimes.set.minute) &&
+          (dateTime.hour > sunTimes.rise.hour || dateTime.hour > 8 ||
+           (dateTime.hour == sunTimes.rise.hour &&
+            dateTime.minute >= sunTimes.rise.minute))) {
+        door.OpenDoor();
+        digitalWrite(LED, LOW);
+      }
+    }
+    // don't close the door if it' alreay closed
+    if (door.getDoorState() != 0) {
+      // if time before sunrise close the door
+      if (dateTime.hour < 8 || dateTime.hour < sunTimes.rise.hour ||
+          (dateTime.hour == sunTimes.rise.hour &&
+           dateTime.minute <= sunTimes.rise.minute)) {
+        door.CloseDoor();
+        digitalWrite(LED, HIGH);
+      }
+      // if time after sunset close the door
+      if (dateTime.hour > sunTimes.set.hour ||
+          (dateTime.hour == sunTimes.set.hour &&
+           dateTime.minute >= sunTimes.set.minute)) {
+        door.CloseDoor();
+        digitalWrite(LED, HIGH);
+      }
+    }
   }
-
-  // after sunset close the door
-  if (door.getDoorState() == 1 && dateTime.hour > 12 &&
-      (dateTime.hour > sunTimes.set.hour ||
-       (dateTime.hour =
-            sunTimes.set.hour && dateTime.minute >= sunTimes.set.minute))) {
-    door.CloseDoor();
-    Serial.println("Close");
-    digitalWrite(LED, HIGH);
-  }
-
-  delay(1000);
 }
