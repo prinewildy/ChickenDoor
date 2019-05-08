@@ -237,10 +237,9 @@ void setup() {
   timer1_attachInterrupt(flashISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
   timer1_write(75000);
+
   delay(1000);
-  Serial.println("start door open");
   door.OpenDoor();
-  Serial.println("end door open");
 }
 
 sun getSunTimes() {
