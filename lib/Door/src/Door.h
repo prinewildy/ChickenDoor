@@ -12,6 +12,7 @@ private:
   bool m_doorMoving;
   Stepper &m_stepper;
   int m_degsToOpenDoor;
+  bool m_manualMode;
 
 public:
   Door(int height, int pitch, int endStop, Stepper &stepper);
@@ -24,6 +25,8 @@ public:
   int getHeight() { return m_height; }
   int getPosition() { return m_position; }
   bool getDoorState() { return m_doorState; }
+  volatile void setManualMode(bool manualMode) { m_manualMode = manualMode; }
+  volatile bool getManualMode() { return m_manualMode; }
   volatile bool isDoorMoving() { return m_doorMoving; }
 };
 

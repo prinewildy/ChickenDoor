@@ -8,6 +8,7 @@ private:
   int m_step;
   int m_steps;
   int m_position;
+  void Step();
 
 public:
   Stepper(int dir, int enable, int step, int steps);
@@ -15,6 +16,7 @@ public:
   void Disable();
   void Stop();
   void Move(int degs);
+  void MoveSteps(int steps);
   int getSteps() { return m_steps; }
   void setPosition(int position) { m_position = position; }
   int getPosition() { return m_position; }
