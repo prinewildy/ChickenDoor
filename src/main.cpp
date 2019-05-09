@@ -1,3 +1,4 @@
+#include "ChickenTime.h"
 #include "Door.h"
 #include "ESP8266WiFi.h"
 #include "ESPAsyncTCP.h"
@@ -9,12 +10,6 @@
 #include <ESP8266HTTPClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-
-#define LEAP_YEAR(Y)                                                           \
-  (((1970 + Y) > 0) && !((1970 + Y) % 4) &&                                    \
-   (((1970 + Y) % 100) || !((1970 + Y) % 400)))
-static const uint8_t _monthDays[] = {31, 28, 31, 30, 31, 30,
-                                     31, 31, 30, 31, 30, 31};
 
 struct strDateTime {
   byte hour;
@@ -91,86 +86,7 @@ void ICACHE_RAM_ATTR flashISR() {
   }
 }
 
-strDateTime ConvertUnixTimestamp(unsigned long _tempTimeStamp) {
-  strDateTime _tempDateTime;
-  uint8_t _year, _month, _monthLength;
-  uint32_t _time;
-  unsigned long _days;
-
-  _tempDateTime.epochTime = _tempTimeStamp;
-
-  _time = (uint32_t)_tempTimeStamp;
-  _tempDateTime.second = _time % 60;
-  _time /= 60; // now it is minutes
-  _tempDateTime.minute = _time % 60;
-  _time /= 60; // now it is hours
-  _tempDateTime.hour = _time % 24;
-  _time /= 24;                                     // now it is _days
-  _tempDateTime.dayofWeek = ((_time + 4) % 7) + 1; // Sunday is day 1
-
-  _year = 0;
-  _days = 0;
-  while ((unsigned)(_days += (LEAP_YEAR(_year) ? 366 : 365)) <= _time) {
-    _year++;
-  }
-  _tempDateTime.year = _year; // year is offset from 1970
-
-  _days -= LEAP_YEAR(_year) ? 366 : 365;
-  _time -= _days; // now it is days in this year, starting at 0
-
-  _days = 0;
-  _month = 0;
-  _monthLength = 0;
-  for (_month = 0; _month < 12; _month++) {
-    if (_month == 1) { // february
-      if (LEAP_YEAR(_year)) {
-        _monthLength = 29;
-      } else {
-        _monthLength = 28;
-      }
-    } else {
-      _monthLength = _monthDays[_month];
-    }
-
-    if (_time >= _monthLength) {
-      _time -= _monthLength;
-    } else {
-      break;
-    }
-  }
-  _tempDateTime.month = _month + 1; // jan is month 1
-  _tempDateTime.day = _time + 1;    // day of month
-  _tempDateTime.year += 1970;
-
-  return _tempDateTime;
-}
-
-boolean summerTime(unsigned long _timeStamp) {
-
-  strDateTime _tempDateTime;
-  _tempDateTime = ConvertUnixTimestamp(_timeStamp);
-
-  if (_tempDateTime.month < 3 || _tempDateTime.month > 10)
-    return false;
-  if (_tempDateTime.month > 3 && _tempDateTime.month < 10)
-    return true;
-  if (_tempDateTime.month == 3 &&
-          (_tempDateTime.hour + 24 * _tempDateTime.day) >=
-              (3 + 24 * (31 - (5 * _tempDateTime.year / 4 + 4) % 7)) ||
-      _tempDateTime.month == 10 &&
-          (_tempDateTime.hour + 24 * _tempDateTime.day) <
-              (3 + 24 * (31 - (5 * _tempDateTime.year / 4 + 1) % 7)))
-    return true;
-  else
-    return false;
-}
-
-void setup() {
-  Serial.begin(9600);
-  startWiFI();
-  pinMode(LED, OUTPUT);
-  timeClient.begin();
-
+void startWebServer() {
   server.on("/door/open", HTTP_GET, [](AsyncWebServerRequest *request) {
     door.setManualMode(1);
     action = 1;
@@ -232,7 +148,18 @@ void setup() {
   });
   Serial.println("begin web server");
   server.begin();
+}
 
+void setup() {
+  Serial.begin(9600);
+  startWiFI();
+
+  timeClient.begin();
+  timeClient.forceUpdate();
+
+  startWebServer();
+
+  pinMode(LED, OUTPUT);
   timer1_isr_init();
   timer1_attachInterrupt(flashISR);
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
@@ -286,7 +213,7 @@ void printTimes() {
   Serial.print("Time:");
   Serial.print(dateTime.hour);
   Serial.print(":");
-  Serial.println(dateTime.minute);
+  Serial.print(dateTime.minute);
   Serial.print(":");
   Serial.println(dateTime.second);
   Serial.print("Rise:");
@@ -340,8 +267,8 @@ void loop() {
     if (door.getDoorState() != 1) {
       // if time between (latest of 8AM and Sunrise)
       // and less than sunset: open door
-      if ((dateTime.hour == sunTimes.set.hour &&
-               dateTime.minute <= sunTimes.set.minute ||
+      if (((dateTime.hour == sunTimes.set.hour &&
+            dateTime.minute <= sunTimes.set.minute) ||
            dateTime.hour < sunTimes.set.hour) &&
           dateTime.hour > 7 && (dateTime.hour > sunTimes.rise.hour ||
                                 (dateTime.hour == sunTimes.rise.hour &&
