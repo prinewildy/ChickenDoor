@@ -282,7 +282,25 @@ sun getSunTimes() {
   return _sun;
 }
 
+void printTimes() {
+  Serial.print("Time:");
+  Serial.print(dateTime.hour);
+  Serial.print(":");
+  Serial.println(dateTime.minute);
+  Serial.print(":");
+  Serial.println(dateTime.second);
+  Serial.print("Rise:");
+  Serial.print(sunTimes.rise.hour);
+  Serial.print(":");
+  Serial.println(sunTimes.rise.minute);
+  Serial.print("Set:");
+  Serial.print(sunTimes.set.hour);
+  Serial.print(":");
+  Serial.println(sunTimes.set.minute);
+}
+
 void loop() {
+  timeClient.update();
   delay(1000);
   if (action != 0) {
     if (!door.isDoorMoving()) {
@@ -296,8 +314,6 @@ void loop() {
     }
     action = 0;
   }
-
-  timeClient.update();
 
   // is it summer time?
   if (summerTime(timeClient.getEpochTime())) {
@@ -318,33 +334,40 @@ void loop() {
     currentDay = dateTime.day;
   }
   // if we are in manual mode stop the auto open/close
-  if (door.getManualMode() == 0) {
+  if (door.getManualMode() == 0 and
+      (dateTime.hour != 0 and dateTime.minute != 0)) {
     // dont open the door if it's already open
     if (door.getDoorState() != 1) {
       // if time between (latest of 8AM and Sunrise)
       // and less than sunset: open door
-      if ((dateTime.hour < sunTimes.set.hour &&
-           dateTime.minute < sunTimes.set.minute) &&
-          (dateTime.hour > sunTimes.rise.hour || dateTime.hour > 8 ||
-           (dateTime.hour == sunTimes.rise.hour &&
-            dateTime.minute >= sunTimes.rise.minute))) {
+      if ((dateTime.hour == sunTimes.set.hour &&
+               dateTime.minute <= sunTimes.set.minute ||
+           dateTime.hour < sunTimes.set.hour) &&
+          dateTime.hour > 7 && (dateTime.hour > sunTimes.rise.hour ||
+                                (dateTime.hour == sunTimes.rise.hour &&
+                                 dateTime.minute >= sunTimes.rise.minute))) {
+        printTimes();
         door.OpenDoor();
         digitalWrite(LED, LOW);
       }
     }
-    // don't close the door if it' alreay closed
+    // don't close the door if it's alreay closed
     if (door.getDoorState() != 0) {
       // if time before sunrise close the door
       if (dateTime.hour < 8 || dateTime.hour < sunTimes.rise.hour ||
           (dateTime.hour == sunTimes.rise.hour &&
-           dateTime.minute <= sunTimes.rise.minute)) {
+           dateTime.minute < sunTimes.rise.minute)) {
+        Serial.println("first close");
+        printTimes();
         door.CloseDoor();
         digitalWrite(LED, HIGH);
       }
       // if time after sunset close the door
       if (dateTime.hour > sunTimes.set.hour ||
           (dateTime.hour == sunTimes.set.hour &&
-           dateTime.minute >= sunTimes.set.minute)) {
+           dateTime.minute > sunTimes.set.minute)) {
+        Serial.println("second close");
+        printTimes();
         door.CloseDoor();
         digitalWrite(LED, HIGH);
       }
